@@ -1,17 +1,38 @@
 #!/bin/bash
 
+## Asetetaan sarjaportin asetukset. Pitkä rivi on saatu ajamalla ensin 'screen /dev/ttyUSB0 9600', jotta
+## sarjaportti on luettavissa, jonka jälkeen asetusrivi saadaan komennolla 'stty -g -F /dev/ttyUSB0'
+stty -F /dev/ttyUSB0 406:0:8bd:8a30:3:1c:7f:15:4:2:64:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0
+
 CUR_TEMP=$(head -1 /dev/ttyUSB0) # Lämpötila sarjaportilta muuttujaan
 TIME=$(date +%H:%M) # Kellonaika muuttujaan
 DATE=$(date +%y%m%d) # Päivämäärä muuttujaan
 
-echo "${TIME} ${CUR_TEMP}" >> /home/pi/temperature-${DATE}.log # Kellonaika ja lämpötila päivän lokitiedostoon
-echo "<p>Lämpötila tällä hetkellä: ${CUR_TEMP}'C</p>" > /var/www/html/current-temperature.html # Nettisivun tämänhetkistä lämpötilaa varten
-echo "Refreshing web page..." | systemd-cat -t webtemp # Journaliin merkintä
-cp /home/pi/temperature-${DATE}.log /home/pi/temperature-today.log # Kopioidaan tiedosto, jotta scripti osaa käsitellä
-/home/pi/plot-webtemp # piirretään kaavio gnuplotilla
-cp /home/pi/temperatures.png /var/www/html # gnuplotin kuva webbisivulle
-[[ -e /var/www/html/history/${DATE} ]] || mkdir /var/www/html/history/${DATE} # Tehdään hakemisto webbisivun historia-osioon, jos ei ole jo
-cp /home/pi/temperatures.png /var/www/html/history/${DATE}/temperatures.png # Kopioidaan kuva historiasivulle
-printf '<!DOCTYPE html>\n<head>\n<title>Lampotila</title>\n</head>\n<body>\n<p><a href="../../index.php">Etusivulle</a><br><a href="..">Historia</a></p><p><img src="temperatures.png"></img></p>\n</body>' > /var/www/html/history/${DATE}/index.html # Luodaan historiasivun index.html
+# Kellonaika ja lämpötila päivän lokitiedostoon
+echo "${TIME} ${CUR_TEMP}" >> /home/pi/temperature-${DATE}.log
+
+# Nettisivun tämänhetkistä lämpötilaa varten
+echo "<p>Lämpötila tällä hetkellä: ${CUR_TEMP}'C</p>" > /var/www/html/current-temperature.html
+
+# Journaliin merkintä
+echo "Refreshing web page..." | systemd-cat -t webtemp
+
+# Kopioidaan tiedosto, jotta scripti osaa käsitellä
+cp /home/pi/temperature-${DATE}.log /home/pi/temperature-today.log
+
+# piirretään kaavio gnuplotilla
+/home/pi/plot-webtemp
+
+# gnuplotin kuva webbisivulle
+sudo cp /home/pi/temperatures.png /var/www/html
+
+# Tehdään hakemisto webbisivun historia-osioon, jos ei ole jo
+[[ -e /var/www/html/history/${DATE} ]] || mkdir /var/www/html/history/${DATE}
+
+# Kopioidaan kuva historiasivulle
+sudo cp /home/pi/temperatures.png /var/www/html/history/${DATE}/temperatures.png
+
+# Luodaan historiasivun index.html
+printf '<!DOCTYPE html>\n<head>\n<title>Lampotila</title>\n</head>\n<body>\n<p><a href="../../index.php">Etusivulle</a><br><a href="..">Historia</a></p><p><img src="temperatures.png"></img></p>\n</body>' > /var/www/html/history/${DATE}/index.html
 
 exit 0
