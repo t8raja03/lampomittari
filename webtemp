@@ -12,7 +12,7 @@ DATE=$(date +%y%m%d) # Päivämäärä muuttujaan
 echo "${TIME} ${CUR_TEMP}" >> /home/pi/temperature-${DATE}.log
 
 # Nettisivun tämänhetkistä lämpötilaa varten
-echo "<p>Lämpötila tällä hetkellä: ${CUR_TEMP}'C</p>" > /var/www/html/current-temperature.html
+echo "<p>Lämpötila tällä hetkellä: ${CUR_TEMP}'C<br>(Päivitetty ${TIME})</p>" | sudo tee  /var/www/html/current-temperature.html > /dev/null
 
 # Journaliin merkintä
 echo "Refreshing web page..." | systemd-cat -t webtemp
@@ -27,12 +27,12 @@ cp /home/pi/temperature-${DATE}.log /home/pi/temperature-today.log
 sudo cp /home/pi/temperatures.png /var/www/html
 
 # Tehdään hakemisto webbisivun historia-osioon, jos ei ole jo
-[[ -e /var/www/html/history/${DATE} ]] || mkdir /var/www/html/history/${DATE}
+[[ -e /var/www/html/history/${DATE} ]] || sudo mkdir /var/www/html/history/${DATE}
 
 # Kopioidaan kuva historiasivulle
 sudo cp /home/pi/temperatures.png /var/www/html/history/${DATE}/temperatures.png
 
 # Luodaan historiasivun index.html
-printf '<!DOCTYPE html>\n<head>\n<title>Lampotila</title>\n</head>\n<body>\n<p><a href="../../index.php">Etusivulle</a><br><a href="..">Historia</a></p><p><img src="temperatures.png"></img></p>\n</body>' > /var/www/html/history/${DATE}/index.html
+printf '<!DOCTYPE html>\n<head>\n<title>Lampotila</title>\n</head>\n<body>\n<p><a href="../../index.php">Etusivulle</a><br><a href="..">Historia</a></p><p><img src="temperatures.png"></img></p>\n</body>' | sudo tee /var/www/html/history/${DATE}/index.html > /dev/null
 
 exit 0
