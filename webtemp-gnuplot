@@ -1,13 +1,12 @@
-#!/usr/bin/gnuplot
 set term png
-set terminal png size 1300,600
-set output "/home/pi/temperatures.png"
+ set terminal png size 1300,600
+set output '/home/pi/temperatures.png'
 set xlabel 'klo'
 set xdata time
-set timefmt '%H:%M'
+set timefmt "%H:%M"
 set format x "%H:%M"
 set xrange ["00:00":"23:59"]
 set xtics "00:00", 7200, "23:59"
 set ylabel 'lampotila'
 set yrange ["15":"30"]
-plot 'temperature-today.log' using 1:2 with lines
+plot "/home/pi/temperature-today.log" using 1:2 with lines
