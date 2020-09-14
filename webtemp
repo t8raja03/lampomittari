@@ -1,15 +1,19 @@
 #!/bin/bash
+# Versio 2
+# Käyttää Raspberryn omaa OneWire-interfacea.
 
-## Asetetaan sarjaportin asetukset. Pitkä rivi on saatu ajamalla ensin 'screen /dev/ttyUSB0 9600', jotta
-## sarjaportti on luettavissa, jonka jälkeen asetusrivi saadaan komennolla 'stty -g -F /dev/ttyUSB0'
-stty -F /dev/ttyUSB0 406:0:8bd:8a30:3:1c:7f:15:4:2:64:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0
+# Työskentely-ympäristö, täytä omat!
+DS18B20_SERIAL='28-000009ea85d9' # Jokaisella lämpöanturilla yksilöllinen sarjanumero, löytyy /sys/bus/w1/devices/ -hakemistosta
+LOG_DIR=/home/pi # Lokitiedostojen ja kuvaajien työhakemisto
+EXECUTABLE_DIR=/home/pi/lampomittari # hakemisto, jossa on webtemp ja plot-webtemp
 
-CUR_TEMP=$(head -1 /dev/ttyUSB0) # Lämpötila sarjaportilta muuttujaan
+CUR_TEMP_RAW=$(cat /sys/bus/w1/devices/${DS18B20_SERIAL}/w1_slave | grep t= | cut -d "=" -f 2) # Lämpötila 1-wirelta muuttujaan
+let CUR_TEMP=${CUR_TEMP_RAW}/1000 # Raakadata asteen tuhannesosista asteiksi
 TIME=$(date +%H:%M) # Kellonaika muuttujaan
 DATE=$(date +%y%m%d) # Päivämäärä muuttujaan
 
 # Kellonaika ja lämpötila päivän lokitiedostoon
-echo "${TIME} ${CUR_TEMP}" >> /home/pi/temperature-${DATE}.log
+echo "${TIME} ${CUR_TEMP}" >> ${LOG_DIR}/temperature-${DATE}.log
 
 # Nettisivun tämänhetkistä lämpötilaa varten
 echo "<p>Lämpötila tällä hetkellä: ${CUR_TEMP}'C<br>(Päivitetty ${TIME})</p>" | sudo tee  /var/www/html/current-temperature.html > /dev/null
@@ -18,19 +22,33 @@ echo "<p>Lämpötila tällä hetkellä: ${CUR_TEMP}'C<br>(Päivitetty ${TIME})</
 echo "Refreshing web page..." | systemd-cat -t webtemp
 
 # Kopioidaan tiedosto, jotta scripti osaa käsitellä
-cp /home/pi/temperature-${DATE}.log /home/pi/temperature-today.log
+cp ${LOG_DIR}/temperature-${DATE}.log ${LOG_DIR}/temperature-today.log
+
+# Luodaan gnuplotin asetusscripti
+echo -e "set term png\n \
+set terminal png size 1300,600\n\
+set output '${LOG_DIR}/temperatures.png'\n\
+set xlabel 'klo'\n\
+set xdata time\n\
+set timefmt \"%H:%M\"\n\
+set format x \"%H:%M\"\n\
+set xrange [\"00:00\":\"23:59\"]\n\
+set xtics \"00:00\", 7200, \"23:59\"\n\
+set ylabel 'lampotila'\n\
+set yrange [\"15\":\"30\"]\n\
+plot \"${LOG_DIR}/temperature-today.log\" using 1:2 with lines" > ${EXECUTABLE_DIR}/webtemp-gnuplot
 
 # piirretään kaavio gnuplotilla
-/home/pi/plot-webtemp
+/usr/bin/gnuplot ${EXECUTABLE_DIR}/webtemp-gnuplot
 
 # gnuplotin kuva webbisivulle
-sudo cp /home/pi/temperatures.png /var/www/html
+sudo cp ${LOG_DIR}/temperatures.png /var/www/html
 
 # Tehdään hakemisto webbisivun historia-osioon, jos ei ole jo
 [[ -e /var/www/html/history/${DATE} ]] || sudo mkdir /var/www/html/history/${DATE}
 
 # Kopioidaan kuva historiasivulle
-sudo cp /home/pi/temperatures.png /var/www/html/history/${DATE}/temperatures.png
+sudo cp ${LOG_DIR}/temperatures.png /var/www/html/history/${DATE}/temperatures.png
 
 # Luodaan historiasivun index.html
 printf '<!DOCTYPE html>\n<head>\n<title>Lampotila</title>\n</head>\n<body>\n<p><a href="../../index.php">Etusivulle</a><br><a href="..">Historia</a></p><p><img src="temperatures.png"></img></p>\n</body>' | sudo tee /var/www/html/history/${DATE}/index.html > /dev/null
