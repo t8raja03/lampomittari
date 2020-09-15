@@ -8,7 +8,8 @@ LOG_DIR=/home/pi # Lokitiedostojen ja kuvaajien työhakemisto
 EXECUTABLE_DIR=/home/pi/lampomittari # hakemisto, jossa on webtemp ja plot-webtemp
 
 CUR_TEMP_RAW=$(cat /sys/bus/w1/devices/${DS18B20_SERIAL}/w1_slave | grep t= | cut -d "=" -f 2) # Lämpötila 1-wirelta muuttujaan
-let CUR_TEMP=${CUR_TEMP_RAW}/1000 # Raakadata asteen tuhannesosista asteiksi
+let CUR_TEMP_RAW=$CUR_TEMP_RAW/10 # Käytetään bashin puutteita hyväksi ja vähennetään desimaaleja
+CUR_TEMP=$(awk "BEGIN {print $CUR_TEMP_RAW/100}") # Raakadata asteen tuhannesosista asteiksi
 TIME=$(date +%H:%M) # Kellonaika muuttujaan
 DATE=$(date +%y%m%d) # Päivämäärä muuttujaan
 
